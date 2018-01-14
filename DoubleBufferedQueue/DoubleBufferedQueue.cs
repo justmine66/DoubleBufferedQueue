@@ -10,45 +10,67 @@ namespace DoubleBufferedQueue
     /// <summary>
     /// 双缓冲队列
     /// </summary>
-    public class DoubleBufferedQueue<TModel>
+    public class DoubleBufferedQueue<TModel> : IDisposable
     {
-        //专门负责数据写入的队列
-        private readonly Queue<TModel> _write = new Queue<TModel>();
-        //专门负责数据读取的队列
-        private readonly Queue<TModel> _read = new Queue<TModel>();
+        private readonly int _millisecond;
 
-        //消费线程默认阻塞，生产线程默认非阻塞
-        private readonly ManualResetEvent lock1 = new ManualResetEvent(true);
-        private readonly ManualResetEvent lock2 = new ManualResetEvent(false);
+        private readonly Queue<TModel> _write = new Queue<TModel>(); //生产队列
+        private readonly Queue<TModel> _read = new Queue<TModel>();//消费队列
+
+        //生产线程默认非阻塞(有信号)
+        private readonly ManualResetEvent _equeueLock = new ManualResetEvent(true);
+        //消费线程默认阻塞(无信号)
+        private readonly ManualResetEvent _dequeuelock = new ManualResetEvent(false);
+
+        //任务还未入列时，阻塞整个消费线程的信号量(有信号)
         private readonly AutoResetEvent _autoReset = new AutoResetEvent(true);
 
         private volatile Queue<TModel> _currentQueue;//当前要入数据的队列
+        private readonly BackgroundWorker _backgroundWorker;
 
-        public DoubleBufferedQueue()
+        /// <summary>
+        /// 初始化一个<see cref="DoubleBufferedQueue.DoubleBufferedQueue{TModel}">的实例
+        /// </summary>
+        /// <param name="millisecond">消费者线程处理一批后，需要延时的时间，实现定时间隔操作</param>
+        public DoubleBufferedQueue(int millisecond = 0)
         {
-            this._currentQueue = this._write;
-            var backgroundWorker = new BackgroundWorker();
-            backgroundWorker.DoWork += this.BackgroundWorker_DoWork;
-            backgroundWorker.RunWorkerAsync();
+            _millisecond = millisecond;
+            _currentQueue = _write;
+
+            _backgroundWorker = new BackgroundWorker();
+            _backgroundWorker.DoWork += BackgroundWorker_DoWork;
+            _backgroundWorker.RunWorkerAsync();
         }
 
-        public void BackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
+        /// <summary>
+        /// 消息者处理方法
+        /// </summary>
+        public Action<Queue<TModel>> ConsumerAction { get; set; }
+
+        private void BackgroundWorker_DoWork(object sender, DoWorkEventArgs e)
         {
             while (true)
             {
-                this._autoReset.WaitOne();
+                var readQueue = this.GetDequeue();
+                ConsumerAction?.Invoke(readQueue);
 
-                this.lock2.Reset();
-                this.lock1.WaitOne();
-
-                //把当前队列放入消费操作中，把另一个队列重置为当前生产队列
-                Queue<TModel> readQueue = this._currentQueue;
-                this._currentQueue = this._currentQueue == this._write ? this._read : this._write;
-
-                this.lock2.Set();
-
-                this.WriteToConsole(readQueue);
+                if (_millisecond > 0)
+                    Thread.Sleep(TimeSpan.FromMilliseconds(_millisecond));
             }
+        }
+
+        private Queue<TModel> GetDequeue()
+        {
+            this._autoReset.WaitOne();  //这个信号量是保证在没有成员入队列的时，不进行其它操作
+
+            this._dequeuelock.Reset();  //注意两把锁的顺序，不然会造成死锁的问题
+            this._equeueLock.WaitOne();
+
+            var readQueue = _currentQueue;
+            _currentQueue = (_currentQueue == _write) ? _read : _write;
+
+            this._dequeuelock.Set();
+            return readQueue;
         }
 
         private void WriteToConsole(Queue<TModel> readQueue)
@@ -62,15 +84,26 @@ namespace DoubleBufferedQueue
             }
         }
 
-        public void Equeue(TModel item)
+        public void Equeue(TModel item, Action<TModel> action = null)
         {
-            this.lock2.WaitOne();
-            this.lock1.Reset();
+            this._dequeuelock.WaitOne();
+            this._equeueLock.Reset();
 
-            this._currentQueue.Enqueue(item);
+            _currentQueue.Enqueue(item);
+            action?.Invoke(item);
 
-            this.lock1.Set();
-            this._autoReset.Set();
+            _equeueLock.Set();
+            _autoReset.Set();
+        }
+
+        public void Dispose()
+        {
+            _dequeuelock.Reset();
+
+            ConsumerAction?.Invoke(_write);
+            ConsumerAction?.Invoke(_read);
+
+            _backgroundWorker?.Dispose();
         }
     }
 }
