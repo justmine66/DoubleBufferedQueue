@@ -1,8 +1,12 @@
-﻿# 参考地址：
-[微软官网:
-https://docs.microsoft.com/en-us/dotnet/framework/winforms/advanced/using-double-buffering]
-(https://docs.microsoft.com/en-us/dotnet/framework/winforms/advanced/using-double-buffering)
-# 定义
->
+﻿# 简述
+>生产消费是一个古老的计算科学问题，针对这个问题提出了许多解决方案。一般的做法就是使用队列，即生产者写入数据到单个队列，然后消费者从队列中读取数据。为了避免竞争，当生产者写入数据到队列时，消费者不能读取数据，反之亦然。
+>使用这个方法的问题就是无论任何时候，当生产者写入数据到队列时，都必须锁住队列；同样，当消费者读取数据时，也必须锁住队列。假如，当生产者每秒生产超过10万次更新的数据时，在我看来，在一秒钟内10次锁住队列将会带来一个巨大的性能(吞吐、并发、延时)损失。这种情况下，我们将引入**双缓冲队列**进行解决。
+# 双队列
+>不是使用单队列，而是使用双队列，这简单而优雅的。在给定的时间内，一个队列承载生产者写入数据，一个队列提供消费者读取数据，此时互补干涉，所以根本不需要锁住队列。**生产者可以自由写入生产队列，消费者可以读取消费读队列**。当消费者读取完消费队列时，生产者被短暂的阻塞，然后切换队列。现在，旧的消费队列变成了新的生产队列，旧的生产队列变成了新的写入队列。切换后，如果新的消费队列没有数据，则消费者被阻塞。当生产者生产更多的数据后，在通知消费者进行消费。
+# 示例说明
+>消费者和生产者之间使用事件来进行同步。
+# 相关参考
+>1. 微软：https://docs.microsoft.com/en-us/dotnet/framework/winforms/advanced/using-double-buffering
+>2. codeproject：https://www.codeproject.com/Articles/27703/Producer-Consumer-Using-Double-Queues
 
 

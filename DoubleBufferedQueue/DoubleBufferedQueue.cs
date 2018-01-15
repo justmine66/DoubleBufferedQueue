@@ -84,6 +84,11 @@ namespace DoubleBufferedQueue
             }
         }
 
+        /// <summary>
+        /// 入列
+        /// </summary>
+        /// <param name="item"></param>
+        /// <param name="action"></param>
         public void Equeue(TModel item, Action<TModel> action = null)
         {
             this._dequeuelock.WaitOne();
