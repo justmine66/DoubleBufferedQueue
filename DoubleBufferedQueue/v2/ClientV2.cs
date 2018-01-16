@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace DoubleBufferedQueue.v2
 {
@@ -13,34 +14,39 @@ namespace DoubleBufferedQueue.v2
 
         public static void Run()
         {
-            var watch = Stopwatch.StartNew();
-            ProducerFunc(100000);
-            ConsumerFunc();
-            watch.Stop();
-            Console.WriteLine($"耗时：{watch.Elapsed.TotalSeconds}秒");
+            ProducerFuncAsync(100);
+            ConsumerFuncAsync();
         }
 
-        public static void ProducerFunc(int count)
+        public static Task ProducerFuncAsync(int count)
         {
-            for (int i = 0; i < count; i++)
+            return Task.Run(() =>
             {
-                dbq.Enqueue(i.ToString());
-                Console.WriteLine($"生产 \t{i}");
-                //Thread.Sleep(random.Next(100, 1000));
-            }
-        }
-
-        public static void ConsumerFunc()
-        {
-            while (true)
-            {
-                var item = dbq.Dequeue();
-                if (item != null)
+                for (int i = 0; i < count; i++)
                 {
-                    Console.WriteLine($"消费 \t{item}");
+                    dbq.Enqueue(i.ToString());
+                    Console.ForegroundColor = ConsoleColor.Blue;
+                    Console.WriteLine($"生产\t{i}");
+                    Task.Delay(random.Next(100, 1000));
                 }
-                //Thread.Sleep(random.Next(10, 1000));
-            }
+            });
+        }
+
+        public static Task ConsumerFuncAsync()
+        {
+            return Task.Run(() =>
+            {
+                while (true)
+                {
+                    var item = dbq.Dequeue();
+                    if (item != null)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine($"\t消费\t{item}");
+                    }
+                    Task.Delay(random.Next(10, 1000));
+                }
+            });
         }
     }
 }

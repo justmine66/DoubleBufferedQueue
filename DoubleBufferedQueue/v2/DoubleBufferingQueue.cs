@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace DoubleBufferedQueue.v2
 {
     /// <summary>
-    /// 一个“双缓冲队列”基础类
+    /// 表示一个“双缓冲队列”集合类
     /// </summary>
     public class DoubleBufferingQueue<TModel>
     {
@@ -63,7 +63,7 @@ namespace DoubleBufferedQueue.v2
                                              : this._productQueue;
                         //消费当前队列
                         this._consumeQueue = _currentQueue;
-                        //切换当前队列
+                        //重置当前队列
                         this._currentQueue = this._productQueue;
 
 
