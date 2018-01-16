@@ -1,6 +1,4 @@
-﻿using DoubleBufferedQueue.v1;
-using DoubleBufferedQueue.v2;
-using System;
+﻿using System;
 using System.Threading;
 
 namespace DoubleBufferedQueue
@@ -9,10 +7,7 @@ namespace DoubleBufferedQueue
     {
         static void Main(string[] args)
         {
-            //ManualResetEventTest.EastWindComming();
-            //KidPlayToyClient.Play();
-
-            ClientV2.Run();
+            Client.RunAsync(1000);
 
             Console.Read();
         }

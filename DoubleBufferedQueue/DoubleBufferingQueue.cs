@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DoubleBufferedQueue.v2
+namespace DoubleBufferedQueue
 {
     /// <summary>
     /// 表示一个“双缓冲队列”集合类
@@ -23,12 +23,15 @@ namespace DoubleBufferedQueue.v2
         private ManualResetEvent _blockProducerSignal;
         //生产队列中已存在可用数据，通知消费任务的信号
         private AutoResetEvent _existAvailableDataSignal;
+        private int _consumeBase;//平滑消费基数
 
         /// <summary>
         /// 初始化一个 <see cref="DoubleBufferedQueue.v2.DoubleBufferingQueue{TModel}"/> 实例
         /// </summary>
-        public DoubleBufferingQueue()
+        /// <param name="consumeBase">平滑消费基数</param>
+        public DoubleBufferingQueue(int consumeBase = 0)
         {
+            this._consumeBase = consumeBase;
             this._productQueue = new ConcurrentQueue<TModel>();
             this._consumeQueue = new ConcurrentQueue<TModel>();
             this._currentQueue = this._productQueue;//默认当前队列为消费队列
@@ -50,7 +53,8 @@ namespace DoubleBufferedQueue.v2
                 {
                     //第一次启动时，等待消费队列已存在可用数据
                     this._existAvailableDataSignal.WaitOne();
-                    if (this._consumeQueue.IsEmpty)
+                    if (this._consumeQueue.IsEmpty &&
+                        this._currentQueue.Count >= this._consumeBase)
                     {
                         //通知生产者先暂停生产
                         this._blockProducerSignal.Reset();
