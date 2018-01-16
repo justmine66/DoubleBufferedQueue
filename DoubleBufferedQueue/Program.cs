@@ -1,4 +1,5 @@
 ﻿using DoubleBufferedQueue.v1;
+using DoubleBufferedQueue.v2;
 using System;
 using System.Threading;
 
@@ -11,7 +12,7 @@ namespace DoubleBufferedQueue
         static void Main(string[] args)
         {
             //ManualResetEventTest.EastWindComming();
-            KidPlayToyClient.Play();
+            //KidPlayToyClient.Play();
 
             //var dbq = new DoubleBufferedQueue<string>();
 
@@ -20,6 +21,8 @@ namespace DoubleBufferedQueue
             //    //dbq.Equeue(i.ToString());
             //    Thread.Sleep(100);
             //}
+
+            ClientV2.Run();
 
             Console.Read();
         }
